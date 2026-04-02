@@ -1,0 +1,75 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - uid: string (required) - The unique identifier for the user.
+    //   - email: string (required) - The user's email address.
+    //   - displayName: string (optional) - The user's display name.
+    //   - photoURL: string (optional) - The user's profile picture URL.
+    //   - createdAt: timestamp (optional) - When the user account was created.
+    //
+    // Collection: orders
+    // Document ID: {orderId}
+    // Fields:
+    //   - userId: string (required) - The ID of the user who placed the order.
+    //   - serviceId: string (required) - The ID of the service ordered.
+    //   - serviceTitle: string (required) - The title of the service ordered.
+    //   - option: string (optional) - The specific option selected within the service.
+    //   - platform: string (required, enum: ['whatsapp', 'telegram']) - The platform the user chose to contact on.
+    //   - status: string (required, enum: ['pending', 'contacted', 'completed']) - The status of the order.
+    //   - createdAt: timestamp (required) - When the order was placed.
+    //
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "plutoescoba4@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email']) &&
+             data.uid == request.auth.uid &&
+             data.email is string &&
+             data.email.size() < 100;
+    }
+
+    function isValidOrder(data) {
+      return data.keys().hasAll(['userId', 'serviceId', 'serviceTitle', 'platform', 'status', 'createdAt']) &&
+             data.userId == request.auth.uid &&
+             data.platform in ['whatsapp', 'telegram'] &&
+             data.status in ['pending', 'contacted', 'completed'] &&
+             data.serviceTitle is string &&
+             data.serviceTitle.size() < 100;
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data) && 
+                      request.resource.data.uid == resource.data.uid;
+    }
+
+    match /orders/{orderId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && isValidOrder(request.resource.data);
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+  }
+}

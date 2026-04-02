@@ -1,0 +1,42 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user of the Pluto-tech platform.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "The unique identifier for the user." },
+        "email": { "type": "string", "description": "The user's email address." },
+        "displayName": { "type": "string", "description": "The user's display name." },
+        "photoURL": { "type": "string", "description": "The user's profile picture URL." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the user account was created." }
+      },
+      "required": ["uid", "email"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "An order placed by a user for a specific service.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "The ID of the user who placed the order." },
+        "serviceId": { "type": "string", "description": "The ID of the service ordered." },
+        "serviceTitle": { "type": "string", "description": "The title of the service ordered." },
+        "option": { "type": "string", "description": "The specific option selected within the service." },
+        "platform": { "type": "string", "enum": ["whatsapp", "telegram"], "description": "The platform the user chose to contact on." },
+        "status": { "type": "string", "enum": ["pending", "contacted", "completed"], "description": "The status of the order." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the order was placed." }
+      },
+      "required": ["userId", "serviceId", "serviceTitle", "platform"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile documents."
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Order records."
+    }
+  }
+}
